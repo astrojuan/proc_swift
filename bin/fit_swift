@@ -1,0 +1,34 @@
+#! /usr/bin/env python
+
+"""
+
+"""
+
+def check_response(question):
+    resp = raw_input(question+" [y]/n :") or "y"
+    if resp.strip().lower()[0] == "y":
+        response=True
+    else:
+        response=False
+    return response
+
+if __name__ == "__main__":
+    from proc_swift import fit_srcbin10, print_obsinfo
+    import argparse
+    parser = argparse.ArgumentParser(description='Fit XRT spectrum for swift data;  '
+                                                 'the analysis results are in the ProcDir/work/OBSID/xspec subdirectory')
+    parser.add_argument("obsid", type=str, help="Swift XRT obsid to process")
+    parser.add_argument("--rmfdir", help="rmf directory (default /caldb/data/swift/xrt/cpf/rmf)", type=str, default="/caldb/data/swift/xrt/cpf/rmf")
+    parser.add_argument("--ProcDir", help="Directory where Processed data is located (default = /Users/corcoran/Dropbox/Eta_Car/swift/quicklook)", type=str, default="/Users/corcoran/Dropbox/Eta_Car/swift/quicklook")
+    args=parser.parse_args()
+    obsid=args.obsid
+    ProcDir=args.ProcDir
+    rmfdir=args.rmfdir
+    WorkDir = ProcDir+'/work'
+    #fit spectrum
+    obsinfo, xcm = fit_srcbin10(obsid, WorkDir=WorkDir, emin=2.0, emax=10.0, rmfdir=rmfdir)
+    # record info
+    obsinfo_log=WorkDir+"/"+obsid.strip()+"/xspec/obsinfo.log"
+    print_obsinfo(obsinfo, outfile=obsinfo_log)
+    resp = raw_input("Press <CR> to Finish :")
+

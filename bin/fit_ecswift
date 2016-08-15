@@ -1,0 +1,51 @@
+#! /usr/bin/env python
+
+def check_response(question):
+    resp = raw_input(question+" [y]/n :") or "y"
+    if resp.strip().lower()[0] == "y":
+        response=True
+    else:
+        response=False
+    return response
+
+if __name__ == "__main__":
+    from ecswift import fit_ecsrcbin10, print_obsinfo
+    import argparse
+    import shutil
+    import os
+    import time
+    parser = argparse.ArgumentParser(description='Fit the eta Carina X-ray spectrum and save the output to a log file')
+    parser.add_argument("obsid", type=str, help="Swift XRT obsid to process")
+    parser.add_argument("--rmfdir", help="rmf directory", type=str, default="/caldb/data/swift/xrt/cpf/rmf")
+    parser.add_argument("--workdir", help="Directory where extracted spectrum is located", type=str, default="/Users/corcoran/Dropbox/Eta_Car/swift/quicklook/work")
+    parser.add_argument("--emin", help="minimum energy for flux calculation", type=float, default=2.0)
+    parser.add_argument("--emax", help="maximum energy for flux calculation", type=float, default=10)
+    parser.add_argument("--outfile", help="Name of output file (optional)", type=str, default="")
+    parser.add_argument("--append", help="append to file (default is to overwrite file)", action="store_true")
+    parser.add_argument("--chatter", help="chattiness (0=low, 10=high)", type=int,default=0)
+    args=parser.parse_args()
+    obsid=args.obsid
+    workdir=args.workdir
+    rmfdir=args.rmfdir
+    emin=args.emin
+    emax=args.emax
+    outfile=args.outfile
+    append=args.append
+    chat=args.chatter
+    xspecdir=workdir+'/'+obsid.strip()+'/xspec' # directory with xspec data
+    if emin > emax:
+        print "EMIN LARGER THAN EMAX; stopping"
+    else:
+        obsinfo, xcm = fit_ecsrcbin10(obsid, WorkDir=workdir, emin=emin, emax=emax, rmfdir=rmfdir, chatter=chat)
+        if not outfile:
+            obsinfo_log=workdir+"/"+obsid.strip()+"/xspec/obsinfo.log"
+        else:
+            obsinfo_log=outfile
+        print_obsinfo(obsinfo, outfile=obsinfo_log, append=append)
+        resp = raw_input("Press <CR> to Finish :")
+
+
+
+
+        
+    

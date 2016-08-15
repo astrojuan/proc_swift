@@ -1,0 +1,13 @@
+xsel
+read event
+.
+swOBSIDxwtw2po_cl.evt
+yes
+set device /xw
+set bin 100
+extract curve
+save curve ec_src
+extract image
+filter time cursor
+save time cursor
+re y 0 10

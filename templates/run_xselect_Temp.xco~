@@ -1,0 +1,12 @@
+xsel
+read event
+/Users/jamar/Dropbox/swift/Jamar_Liburd/QuickLook_data/work/00000000000/xsel
+sw00000000000xwtw2po_cl.evt
+yes
+set bin 100
+extract curve
+extract image 
+save curve ec_srccurve
+plot image
+filter time cursor
+re y 0 10

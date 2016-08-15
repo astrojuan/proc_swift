@@ -1,0 +1,18 @@
+
+
+#
+##
+#
+echo 
+echo NOW CREATING ANCILLARY RESPONSE FILE 00000000000 NUMBER 1 OUT OF  1          
+echo
+
+xrtmkarf outfile=/Users/jamar/Dropbox/swift/Jamar_Liburd/QuickLook_data/work/00000000000/xspec/ec_srcbin10.arf psfflag='yes' phafile = /Users/jamar/Dropbox/swift/Jamar_Liburd/QuickLook_data/work/00000000000/xspec/ec_srcbin10.pha srcx = -1  srcy = -1 clobber=yes expofile = /Users/jamar/Dropbox/swift/Jamar_Liburd/QuickLook_data/work/00000000000/sw00000000000xwtw2po_ex.img
+
+
+
+
+#xrtmkarf outfile=/Users/corcoran/Dropbox/Eta_Car/swift/quicklook/work/00031308029/xspec/ec_srcbin10.arf psfflag='yes' phafile = /Users/corcoran/Dropbox/Eta_Car/swift/quicklook/work/00031308029/xspec/ec_srcbin10.pha srcx = -1  srcy = -1 clobber=yes expofile = /Users/corcoran/Dropbox/Eta_Car/swift/quicklook/work/00031308029/sw00031308029xwtw2po_ex.img
+
+# source mk_xrt_arfs_jamar.csh :
+#/Users/jamar/Dropbox/swift/QuickLook_Practice/00091911021/xrt/products 

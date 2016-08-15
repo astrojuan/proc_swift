@@ -1,0 +1,31 @@
+#! /usr/bin/env python
+
+if __name__ == "__main__":
+    from ecswift import untar_ecswift, reduce_ec_xrt, fit_ecsrcbin10
+    import argparse
+    parser = argparse.ArgumentParser(description='Run XRT reduction pipeline for Quicklook data')
+    parser.add_argument("obsid", type=str, help="Swift XRT obsid to process")
+    parser.add_argument("-ql",help="Process Quicklook data") 
+    args=parser.parse_args()
+    obsid=args.obsid
+    if args.ql:
+        tardir='/Users/corcoran/Downloads'
+        ProcDir='/Users/corcoran/Dropbox/Eta_Car/swift/quicklook'
+        TemplateDirectory='/Users/corcoran/Dropbox/Eta_Car/swift/quicklook/templates'
+        untar_ecswift(obsid, tardir=tardir, ProcDir=ProcDir)
+        reduce_ec_xrt(obsid, ProcDir=ProcDir, TemplateDirectory=TemplateDirectory)
+        obs, xcm = fit_ecsrcbin10
+        WorkDir = ProcDir+'/work'
+        rmfdir = '/caldb/data/swift/xrt/cpf/rmf'
+        fit_ecsrcbin10(obsid, WorkDir=, emin=2.0, emax=10.0, rmfdir=rmfdir)
+    else:
+        ProcDir='/Users/corcoran/research/ETA_CAR/Swift/2014'
+        TemplateDirectory='/Users/corcoran/Dropbox/Eta_Car/swift/quicklook/templates'
+        reduce_ec_xrt(obsid, ProcDir=ProcDir, TemplateDirectory=TemplateDirectory)
+        obs, xcm = fit_ecsrcbin10
+        WorkDir = ProcDir+'/work'
+        rmfdir = '/caldb/data/swift/xrt/cpf/rmf'
+        fit_ecsrcbin10(obsid, WorkDir=, emin=2.0, emax=10.0, rmfdir=rmfdir)
+
+        
+    

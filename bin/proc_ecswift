@@ -1,0 +1,84 @@
+#! /usr/bin/env python
+
+"""
+CHANGES:
+20150818 MFC Changed default template directory
+
+"""
+
+# TODO: should automatically look for pc mode or wt mode event files then process both if both found
+
+def check_response(question):
+    resp = raw_input(question+" [y]/n :") or "y"
+    if resp.strip().lower()[0] == "y":
+        response=True
+    else:
+        response=False
+    return response
+
+if __name__ == "__main__":
+    from ecswift import untar_ecswift, reduce_ec_xrt, fit_ecsrcbin10, print_obsinfo
+    import argparse
+    import shutil
+    import os
+    import time
+    parser = argparse.ArgumentParser(description='Run XRT reduction for eta car swift data; the Swift data are stored in the ProcDir directory '
+                                                 'and analysis results in the ProcDir/work subdirectory')
+    parser.add_argument("obsid", type=str, help="Swift XRT obsid to process")
+    parser.add_argument("-ql", "--quicklook", help="Process Quicklook data instead of archived data (Default is Final Processing)", action="store_true")
+    parser.add_argument("--rmfdir", help="rmf directory (default /caldb/data/swift/xrt/cpf/rmf)", type=str, default="/caldb/data/swift/xrt/cpf/rmf")
+    parser.add_argument("--TemplateDir", help="Template Directory for xselect scripts (default = /software/github/ecswift/templates)", type=str, default="/software/github/ecswift/templates")
+    parser.add_argument("--ProcDir", help="Directory where Processed data is located (default = /Users/corcoran/Dropbox/Eta_Car/swift/quicklook)", type=str, default="/Users/corcoran/Dropbox/Eta_Car/swift/quicklook")
+    parser.add_argument("--tardir", help="Directory where the quicklook tar file is located", type=str, default="/Users/corcoran/Downloads")
+    parser.add_argument("--clobber", help="overwrite output directory", action="store_true")
+    parser.add_argument("--update", help="update existing data with new version", action="store_true")
+    parser.add_argument("--pcmode", help="photon counting mode data (otherwise WT assumed)",action="store_true")
+    args=parser.parse_args()
+    obsid=args.obsid
+    clobber=args.clobber
+    ProcDir=args.ProcDir
+    TemplateDir=args.TemplateDir
+    tardir=args.tardir
+    rmfdir=args.rmfdir
+    pcmode=args.pcmode
+    if args.quicklook:
+        if not ProcDir:
+            ProcDir = '/Users/corcoran/Dropbox/Eta_Car/swift/quicklook'
+        if args.update:
+            clobber = True
+            if os.path.isdir(ProcDir + '/' + obsid.strip()):
+                yymmdd = time.strftime("%Y%m%d")
+                question = "move %s to %s?" % (ProcDir + '/' + obsid.strip(), ProcDir + "/" + obsid + "." + yymmdd)
+                if check_response(question):
+                    os.rename(ProcDir + '/' + obsid.strip(), ProcDir + "/" + obsid + "." + yymmdd)
+        untar_ecswift(obsid, tardir=tardir, ProcDir=ProcDir)
+    else:
+        if not ProcDir:
+            ProcDir = '/Users/corcoran/research/ETA_CAR/Swift/2014'
+    WorkDir = ProcDir+'/work'
+    obsid_dir=ProcDir+'/'+obsid.strip()
+    if os.path.exists(obsid_dir):
+        if clobber:
+            olddir = WorkDir+"/"+obsid.strip()
+            question = "Clobber directory %s ?" % olddir
+            if check_response(question):
+                print "removing %s" % olddir
+                try:
+                    shutil.rmtree(olddir)
+                except:
+                    pass
+            else:
+                print "Directory %s not overwritten" % olddir
+        reduce_ec_xrt(obsid, ProcDir=ProcDir, TemplateDirectory=TemplateDir, pcmode=pcmode)
+        obsinfo, xcm = fit_ecsrcbin10(obsid, WorkDir=WorkDir, emin=2.0, emax=10.0, rmfdir=rmfdir)
+        obsinfo_log=WorkDir+"/"+obsid.strip()+"/xspec/obsinfo.log"
+        print_obsinfo(obsinfo, outfile=obsinfo_log)
+        resp = raw_input("Press <CR> to Finish :")
+    else:
+        print "Directory %s does not exist" % obsid
+
+
+
+
+        
+    
