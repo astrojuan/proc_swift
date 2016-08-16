@@ -183,7 +183,7 @@ def mk_arf(obsid, mode,
 
 def create_xrtpipeline_script(obsid, mode='wt',
                               ProcDir = '/Users/corcoran/research/WR140/Swift/data/2016',
-                              clobber=clobber):
+                              clobber=True):
     """
 
     creates the xrtpipeline processing script run_xrtpipeline_<OBSID>.csh
