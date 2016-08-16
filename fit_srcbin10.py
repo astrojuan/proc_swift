@@ -210,8 +210,32 @@ def get_obsid_flux(obsid, emin=2.0, emax=10.0,
     print_obsinfo(obsinfo, outfile=outfile, append=append)
     return
 
-# if __name__ == "__main__":
-#     obsid="00031251100"
-#     WorkDir = "/Users/corcoran/research/WR140/Swift/data/2016/work"
-#     rmfdir = "/caldb/data/swift/xrt/cpf/rmf"
-#     obsinfo, xcm = fit_srcbin10(obsid, WorkDir=WorkDir, emin=2.0, emax=10.0, rmfdir=rmfdir)
+def run_fit(obsid, mode, WorkDir='/Users/corcoran/research/WR140/Swift/data/2016/work',
+            emin=2.0, emax=10.0, rmfdir='/caldb/data/swift/xrt/cpf/rmf'):
+    """
+    for a single obsid or a list of obsids fit the swift spectra using fit_srcbin10 and
+    save the output
+    :param obsid:
+    :param mode:
+    :param WorkDir:
+    :param emin:
+    :param emax:
+    :param rmfdir:
+    :return:
+    """
+    import numpy as np
+    if np.isscalar(obsid):
+        obsid = [obsid] # create an array if a scalar value passed in
+    for obs in obsid:
+        obsinfo, xcm = fit_srcbin10(obsid, WorkDir=WorkDir, emin=emin, emax=emax, rmfdir=rmfdir)
+        obsinfo_log=WorkDir+"/"+obsid.strip()+"/xspec/obsinfo.log"
+        print_obsinfo(obsinfo, outfile=obsinfo_log)
+        resp = raw_input("Press <CR> to Finish :")
+    return
+
+
+if __name__ == "__main__":
+    obsid="00031251100"
+    WorkDir = "/Users/corcoran/research/WR140/Swift/data/2016/work"
+    rmfdir = "/caldb/data/swift/xrt/cpf/rmf"
+    obsinfo, xcm = fit_srcbin10(obsid, WorkDir=WorkDir, emin=2.0, emax=10.0, rmfdir=rmfdir)

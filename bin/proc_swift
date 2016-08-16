@@ -56,20 +56,26 @@ if __name__ == "__main__":
             ProcDir = '/Users/corcoran/research/ETA_CAR/Swift/2014'
     WorkDir = ProcDir+'/work'
     obsid_dir=ProcDir+'/'+obsid.strip()
+    process = True
     if os.path.exists(obsid_dir):
-        if clobber:
-            olddir = WorkDir+"/"+obsid.strip()
-            question = "Clobber directory %s ?" % olddir
-            if check_response(question):
-                print "removing %s" % olddir
-                try:
-                    shutil.rmtree(olddir)
-                except:
-                    pass
+        olddir = WorkDir + "/" + obsid.strip()
+        if os.path.exists(olddir):
+            if clobber:
+                question = "Clobber directory %s ?" % olddir
+                if check_response(question):
+                    print "removing %s" % olddir
+                    try:
+                        shutil.rmtree(olddir)
+                    except:
+                        pass
+                else:
+                    print "Directory %s not overwritten" % olddir
             else:
-                print "Directory %s not overwritten" % olddir
+                print "Directory exists but clobber is False; not overwritten;"
+                process = False
         # reduce data
-        reduce_xrt(obsid, ProcDir=ProcDir, pcmode=pcmode)
+        if process:
+            reduce_xrt(obsid, ProcDir=ProcDir, pcmode=pcmode)
         # # fit spectrum
         # obsinfo, xcm = fit_srcbin10(obsid, WorkDir=WorkDir, emin=2.0, emax=10.0, rmfdir=rmfdir)
         # # record info
