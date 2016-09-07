@@ -27,12 +27,12 @@ if __name__ == "__main__":
     parser.add_argument("obsid", type=str, help="Swift XRT obsid to process")
     parser.add_argument("-ql", "--quicklook", help="Process Quicklook data instead of archived data (Default is Final Processing)", action="store_true")
     parser.add_argument("--rmfdir", help="rmf directory (default /caldb/data/swift/xrt/cpf/rmf)", type=str, default="/caldb/data/swift/xrt/cpf/rmf")
-    #parser.add_argument("--TemplateDir", help="Template Directory for xselect scripts (default = /software/github/swift/templates)", type=str, default="/software/github/ecswift/templates")
     parser.add_argument("--ProcDir", help="Directory where Processed data is located (default = /Users/corcoran/Dropbox/Eta_Car/swift/quicklook)", type=str, default="/Users/corcoran/Dropbox/Eta_Car/swift/quicklook")
     parser.add_argument("--tardir", help="Directory where the quicklook tar file is located", type=str, default="/Users/corcoran/Downloads")
     parser.add_argument("--clobber", help="overwrite output directory", action="store_true")
     parser.add_argument("--update", help="update existing data with new version", action="store_true")
     parser.add_argument("--pcmode", help="photon counting mode data (otherwise WT assumed)",action="store_true")
+    parser.add_argument("--noprocess", help="do not re-process data using xrtpipeline", action="store_true")
     args=parser.parse_args()
     obsid=args.obsid
     clobber=args.clobber
@@ -40,6 +40,7 @@ if __name__ == "__main__":
     tardir=args.tardir
     rmfdir=args.rmfdir
     pcmode=args.pcmode
+    noprocess = args.noprocess
     if args.quicklook:
         if not ProcDir:
             ProcDir = '/Users/corcoran/Dropbox/Eta_Car/swift/quicklook'
@@ -56,34 +57,21 @@ if __name__ == "__main__":
             ProcDir = '/Users/corcoran/research/ETA_CAR/Swift/2014'
     WorkDir = ProcDir+'/work'
     obsid_dir=ProcDir+'/'+obsid.strip()
-    process = True
-    if os.path.exists(obsid_dir):
-        olddir = WorkDir + "/" + obsid.strip()
-        if os.path.exists(olddir):
-            if clobber:
-                question = "Clobber directory %s ?" % olddir
-                if check_response(question):
-                    print "removing %s" % olddir
-                    try:
-                        shutil.rmtree(olddir)
-                    except:
-                        pass
+    if not noprocess:
+        if os.path.exists(obsid_dir): # check to see if directory exists
+            olddir = WorkDir + "/" + obsid.strip()
+            if os.path.exists(olddir):
+                if clobber:
+                    shutil.rmtree(olddir)
                 else:
-                    print "Directory %s not overwritten" % olddir
-            else:
-                print "Directory exists but clobber is False; not overwritten;"
-                process = False
-        # reduce data
-        if process:
-            reduce_xrt(obsid, ProcDir=ProcDir, pcmode=pcmode)
-        # # fit spectrum
-        # obsinfo, xcm = fit_srcbin10(obsid, WorkDir=WorkDir, emin=2.0, emax=10.0, rmfdir=rmfdir)
-        # # record info
-        # obsinfo_log=WorkDir+"/"+obsid.strip()+"/xspec/obsinfo.log"
-        # print_obsinfo(obsinfo, outfile=obsinfo_log)
-        # resp = raw_input("Press <CR> to Finish :")
-    else:
-        print "Directory %s does not exist" % obsid
+                    print "Directory %s exists but clobber = False; not overwritten" % olddir
+                    noprocess = True   # don't process since clobber set to False
+    if not noprocess:
+        reduce_xrt(obsid, ProcDir=ProcDir, pcmode=pcmode)
+    #
+    # do a fit
+    obsinfo, xcm = fit_srcbin10(obsid, WorkDir=WorkDir, emin=2.0, emax=10.0, rmfdir=rmfdir, pcmode=pcmode)
+    resp = raw_input("Press <CR> to Finish :")
 
 
 

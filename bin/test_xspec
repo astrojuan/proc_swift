@@ -1,15 +1,17 @@
-
+#! /usr/bin/env python
 
 import os
-import xspec
 
 def fit_srcbin10(obsid, WorkDir="/Users/corcoran/Dropbox/Eta_Car/swift/quicklook/work",
-                   emin=2.0, emax=10.0, rmfdir='/caldb/data/swift/xrt/cpf/rmf', chatter=0, pcmode = False):
+                 emin=2.0, emax=10.0, rmfdir='/caldb/data/swift/xrt/cpf/rmf', chatter=0, pcmode = False):
     print "starting fit_srcbin10"
     import glob
     import pyfits
     import numpy as np
     from astropy.time import Time
+    import os
+    print "importing xspec"
+    import xspec
     xspec.AllData.clear()
     xspec.Xset.chatter = chatter
     xspec.FitManager.query="yes"
@@ -24,7 +26,7 @@ def fit_srcbin10(obsid, WorkDir="/Users/corcoran/Dropbox/Eta_Car/swift/quicklook
     print "\n"
     os.chdir(xspecdir)
     src=xspec.Spectrum("srcbin10.pha")
-    try: 
+    try:
         hdu=pyfits.open("src.arf")
     except:
         print "ARF src.arf not found; Returning"
@@ -66,7 +68,9 @@ def fit_srcbin10(obsid, WorkDir="/Users/corcoran/Dropbox/Eta_Car/swift/quicklook
     first fit without the cflux component
     """
     mostring="wabs*apec + wabs*(apec + gaussian)"
+    print "m=xspec.Model(mostring) start"
     m=xspec.Model(mostring)
+    print "m=xspec.Model(mostring) end"
     m.wabs.nH=[1.1,0.1,0,0,5,5]
     m.apec.kT=[1.0,0.1,0.1,0.1,2,2]
     m.apec.norm=[0.1,0.1,0.0,0.0,2,2]
@@ -165,8 +169,7 @@ def fit_srcbin10(obsid, WorkDir="/Users/corcoran/Dropbox/Eta_Car/swift/quicklook
     f.close()
     #print "Changing directory back to %s" % cwd
     print "\n"
-    obsinfo_log = xspecdir+"/obsinfo.log"
-    print_obsinfo(output, outfile=obsinfo_log)
+    os.chdir(cwd)
     return output, xcm
 
 def print_obsinfo(obsinfo,outfile='',append=False):
@@ -247,14 +250,6 @@ def run_fit(obsid, mode, WorkDir='/Users/corcoran/research/WR140/Swift/data/2016
         resp = raw_input("Press <CR> to Finish :")
     return
 
-def check_response(question):
-    resp = raw_input(question+" [y]/n :") or "y"
-    if resp.strip().lower()[0] == "y":
-        response=True
-    else:
-        response=False
-    return response
-
 if __name__ == "__main__":
     #from proc_swift import fit_srcbin10, print_obsinfo
     import argparse
@@ -262,7 +257,10 @@ if __name__ == "__main__":
                                                  'the analysis results are in the ProcDir/work/OBSID/xspec subdirectory')
     parser.add_argument("obsid", type=str, help="Swift XRT obsid to process")
     parser.add_argument("--rmfdir", help="rmf directory (default /caldb/data/swift/xrt/cpf/rmf)", type=str, default="/caldb/data/swift/xrt/cpf/rmf")
-    parser.add_argument("--ProcDir", help="Directory where Processed data is located (default = /Users/corcoran/Dropbox/Eta_Car/swift/quicklook)", type=str, default="/Users/corcoran/Dropbox/Eta_Car/swift/quicklook")
+    parser.add_argument("--ProcDir", help="Directory where Processed data is located "
+                                          "(default = /Users/corcoran/Dropbox/Eta_Car/swift/quicklook)",
+                        type=str, default="/Users/corcoran/Dropbox/Eta_Car/swift/quicklook")
+    parser.add_argument("")
     args=parser.parse_args()
     obsid=args.obsid
     ProcDir=args.ProcDir
@@ -271,7 +269,8 @@ if __name__ == "__main__":
     #fit spectrum
     obsinfo, xcm = fit_srcbin10(obsid, WorkDir=WorkDir, emin=2.0, emax=10.0, rmfdir=rmfdir)
     # record info
-    obsinfo_log=WorkDir+"/"+obsid.strip()+"/xspec/obsinfo.log"
+    obsinfo_log=WorkDir+"/"+obsid.strip()+"/"+mode+"/xspec/obsinfo.log"
     print_obsinfo(obsinfo, outfile=obsinfo_log)
     resp = raw_input("Press <CR> to Finish :")
+
 

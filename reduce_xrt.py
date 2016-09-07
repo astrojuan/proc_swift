@@ -2,7 +2,9 @@ import glob
 import os
 from astropy.io import fits as pyfits
 
-def mk_xcofiles(obsid, mode, ProcDir='/Users/corcoran/research/WR140/Swift/data/2016'):
+def mk_xcofiles(obsid, mode,
+                ProcDir='/Users/corcoran/research/WR140/Swift/data/2016',
+                clobber=True):
     """
     Creates xselect time filter  and pha extraction command files
     to be run in the work/OBSID/xsel directory for a given obsid; writes
@@ -37,8 +39,9 @@ def mk_xcofiles(obsid, mode, ProcDir='/Users/corcoran/research/WR140/Swift/data/
     xcofile = open('xselect{0}_timefilt.xco'.format(mode.strip()),mode='w')
     cmd = []
     cmd.append("xsel_session")
-    cmd.append("$rm src.lc")
-    cmd.append("$rm xtimefilt.curs_gti")
+    if clobber:
+        cmd.append("$rm src*.lc".format(mode))
+        cmd.append("$rm xtimefilt*.curs_gti".format(mode))
     cmd.append("read event")
     cmd.append(".")
     cmd.append("{0}".format(evtfile))
@@ -46,7 +49,7 @@ def mk_xcofiles(obsid, mode, ProcDir='/Users/corcoran/research/WR140/Swift/data/
     cmd.append("set device /xw")
     cmd.append("set bin 100")
     cmd.append("extract curve")
-    cmd.append("save curve src")
+    cmd.append("save curve src_{0}".format(mode))
     cmd.append("filter time cursor")
     cmd.append("re y 0 10")
     cmd.append("quit")
@@ -63,8 +66,9 @@ def mk_xcofiles(obsid, mode, ProcDir='/Users/corcoran/research/WR140/Swift/data/
     xcofile = open('xselect{0}_pha.xco'.format(mode.strip()),mode='w')
     cmd=[]
     cmd.append("xsel_session")
-    cmd.append("$rm src.pha")
-    cmd.append("$rm bkg.pha")
+    if clobber:
+        cmd.append("$rm s*.pha")
+        cmd.append("$rm b*.pha")
     cmd.append("xsel")
     cmd.append("read event")
     cmd.append(".")
@@ -118,9 +122,11 @@ def mk_regions(obsid, mode, ProcDir = '/Users/corcoran/research/WR140/Swift/data
     from ds9 import ds9
     import glob
     import os
+    obsid=obsid.strip()
+    mode=mode.strip().lower()
     if not evtfile:
         try:
-            fname = ProcDir + '/work/' + obsid + '/sw' + obsid + 'x' + mode.strip().lower() + '*po_cl.evt'
+            fname = "{0}/work/{1}/{2}/xsel/sw{1}x{2}*po_cl.evt".format(ProcDir,obsid,mode)
             evt = glob.glob(fname)[0]
         except:
             print "{0} Not Found; returning".format(fname)
@@ -133,7 +139,7 @@ def mk_regions(obsid, mode, ProcDir = '/Users/corcoran/research/WR140/Swift/data
     #
     d.set('file '+evt)
     d.set('smooth')
-    s = RegionDir.strip()+'/*src*'+mode.strip()+'.reg'
+    s = RegionDir.strip()+'/*src*'+mode+'.reg'
     try:
         sregion = glob.glob(s)[0]
     except Exception, errmsg:
@@ -144,21 +150,21 @@ def mk_regions(obsid, mode, ProcDir = '/Users/corcoran/research/WR140/Swift/data
     raw_input("\nAdjust source region if necessary; when ready, press <CR> when Done to save them ...")
     # source in frame 1
     d.set('frame 1')
-    src_reg_file_dir = ProcDir+'/work/'+obsid.strip()+'/xsel/'
+    src_reg_file_dir = '{0}/work/{1}/{2}/xsel/'.format(ProcDir,obsid,mode)
     if not os.path.isdir(src_reg_file_dir):
         os.makedirs(src_reg_file_dir)
-    src_reg_file = src_reg_file_dir+'/src_'+mode.strip().lower()+'.reg'
+    src_reg_file = '{0}/src_{1}.reg'.format(src_reg_file_dir,mode)
     d.set('regions save '+src_reg_file)
     #
     # now background region
     #
-    b = RegionDir.strip()+'/*bkg*'+mode.strip()+'.reg'
+    b = RegionDir.strip()+'/*bkg*'+mode+'.reg'
     bregion = glob.glob(b)[0]
     d.set('file '+evt)
     d.set('smooth')
     d.set('regions load '+bregion)
     raw_input("\nAdjust background region if necessary; when ready, press <CR> when Done to save them ...")
-    bkg_reg_file = ProcDir+'/work/'+obsid.strip()+'/xsel/bkg_'+mode.strip().lower()+'.reg'
+    bkg_reg_file = '{0}/work/{1}/{2}/xsel/bkg_{2}.reg'.format(ProcDir,obsid,mode)
     d.set('regions save '+bkg_reg_file)
     d.set('exit')
     return
@@ -166,9 +172,9 @@ def mk_regions(obsid, mode, ProcDir = '/Users/corcoran/research/WR140/Swift/data
 def mk_arf(obsid, mode,
            ProcDir='/Users/corcoran/research/WR140/Swift/data/2016'):
     obs=obsid.strip()
-    xspecdir = "{0}/work/{1}/xspec".format(ProcDir, obs)
+    xspecdir = "{0}/work/{1}/{2}/xspec".format(ProcDir, obs, mode)
     os.chdir(xspecdir)
-    exp = "{0}/work/{1}/sw{1}x{2}*po_ex.img".format(ProcDir,obs,mode)
+    exp = "{0}/work/{1}/xrtfiles/sw{1}x{2}*po_ex.img".format(ProcDir,obs,mode)
     expofile = glob.glob(exp)[0]
     cmd = "xrtmkarf outfile={0}/src.arf " \
           "psfflag='yes' phafile = src.pha srcx = -1  srcy = -1 " \
@@ -197,6 +203,7 @@ def create_xrtpipeline_script(obsid, mode='wt',
     # get ra_obj, dec_obj from header of uf.evt file
     obs = obsid.strip()
     evtname = '{0}/{1}/xrt/event/sw{1}x{2}*po_uf.evt*'.format(ProcDir,obs, mode)
+
     try:
         evtfile = glob.glob(evtname)[0]
     except Exception, errmsg:
@@ -211,12 +218,16 @@ def create_xrtpipeline_script(obsid, mode='wt',
     cmd = []
     if clobber:
         clob='yes'
+        c = 'echo "REMOVING work/{0}"'.format(obs)
+        cmd.append(c)
+        c = "\\rm"
+        cmd.append('\\rm -r work/{0}'.format(obs))
     else:
         clob='no'
     scriptname = ProcDir+'/run_xrtpipeline_'+obsid.strip()+'.csh'
     f = open(scriptname,mode = 'w')
     cmd.append('xrtpipeline srcra="{0:.4f}" srcdec="{1:.4f}" indir={2} '
-               'outdir=work/{2}/xrtfiles steminputs="{2}", clobber="{3}"'.format(ra_obj, dec_obj, obs, clob))
+               'outdir=work/{2}/xrtfiles steminputs="{2}" clobber="{3}"'.format(ra_obj, dec_obj, obs, clob))
     cmd.append('mkdir -p work/{0}/xrtfiles'.format(obs,mode))
     cmd.append('cd work/{0}'.format(obs))
     cmd.append('mv *.* xrtfiles/. # moving xrtpipeline output to xrtfiles')
@@ -225,7 +236,7 @@ def create_xrtpipeline_script(obsid, mode='wt',
     cmd.append('\n')
     cmd.append('cd {0}/xsel'.format(mode))
     evtf = 'sw{0}x{1}*po_cl.evt'.format(obs, mode)
-    cmd.append('echo "linking cleaned event file {0}"')
+    cmd.append('echo "linking cleaned event file {0}"'.format(evtf))
     cmd.append("ln -nfs `ls {0}/work/{1}/xrtfiles/{2}` .".format(ProcDir,obs,evtf))
     cmd.append('cd ../xspec')
     for c in cmd:
@@ -237,7 +248,8 @@ def create_xrtpipeline_script(obsid, mode='wt',
 def reduce_xrt(obsid,
                ProcDir = '/Users/corcoran/research/WR140/Swift/data/2016',
                pcmode=False,
-               clobber = 'True'):
+               clobber = 'True',
+               rmfdir = '/caldb/data/swift/xrt/cpf/rmf'):
     """
     For a given obsid, this routine runs 
       1) DATA REDUCTION: runs xrt pipeline on the downloaded data (in the ProcDir directory) and outputs
@@ -284,11 +296,13 @@ def reduce_xrt(obsid,
     # we now have the cleaned events files in the xrtfiles subdirectory
     # now do the data filtering using xselect
     #
+    mk_spec(obsid, ProcDir=ProcDir,mode=mode,rmfdir=rmfdir)
     return
 
 def mk_spec(obsid,
-              ProcDir = '/Users/corcoran/research/WR140/Swift/data/2016',
-              mode = 'wt'):
+            ProcDir = '/Users/corcoran/research/WR140/Swift/data/2016',
+            mode = 'wt', clobber='True',
+            rmfdir ='/caldb/data/swift/xrt/cpf/rmf'):
     """
     Creates the region and time filter files for xselect, then runs xselect to
     create the source and background spectra for the given obsid and mode
@@ -297,21 +311,24 @@ def mk_spec(obsid,
     :param mode:
     :return:
     """
+    import urllib
+    obs = obsid.strip()
+    mode = mode.strip()
     #
     # display source and background regions and adjust if necessary
     #
-    mk_regions(obsid,mode,ProcDir=ProcDir)
+    print "Making regions"
+    mk_regions(obs,mode,ProcDir=ProcDir)
     #
-    # Run Xselect
+    # Run Xselect to generate time filter
     #
-    obs = obsid.strip()
-    mode = mode.strip()
     XselectDir = "{0}/work/{1}/{2}/xsel/".format(ProcDir, obs, mode)
     if os.path.exists(XselectDir):
+        ans = raw_input('<CR> to run xselect ')
         # print "Creating xselect directory {0}".format(XselectDir)
         # os.makedirs(XselectDir)
         os.chdir(XselectDir)
-        status = mk_xcofiles(obsid, mode)
+        status = mk_xcofiles(obsid, mode, ProcDir = ProcDir, clobber=clobber)
         if status <> 0:
             print "Error in mk_xcofiles; returning"
             return
@@ -325,11 +342,12 @@ def mk_spec(obsid,
         #
         # change to xspec directory & copy pha files
         #
-        XspectDir = ProcDir+"/work/"+obsid+"/xspec/" #specifies the location of the Xspec directory
+        XspectDir = "{0}/work/{1}/{2}/xspec/".format(ProcDir, obs, mode) #specifies the location of the Xspec directory
         os.chdir(XspectDir)# Changed directory to the xspec directory
         os.system("cp ../xsel/*pha .")
         print "Current working dir :",os.getcwd() #Displays current directory
         # group the pha files
+        os.system('rm srcbin10.pha')
         os.system("grppha src.pha srcbin10.pha comm = 'group min 10' temp = exit") #runs the grppha command file.
         #### Make Ancillary response Files
 
@@ -342,9 +360,12 @@ def mk_spec(obsid,
         Response = hdulist[1].header['RESPFILE']
         hdulist.close()
 
-        print "Getting rmf file %s from remote CALDB" % Response
-        swiftrmfdir="http://heasarc.gsfc.nasa.gov/FTP/caldb/data/swift/xrt/cpf/rmf"
-        urllib.urlretrieve(swiftrmfdir+"/"+Response,XspectDir+"/"+Response)
+        print "Getting rmf file {0} from CALDB".format(Response)
+        if os.path.isfile("{0}/{1}".format(rmfdir,Response)):
+            os.system("cp {0}/{1} {2}/.".format(rmfdir,Response, XspectDir))
+        else:
+            swiftrmfdir="http://heasarc.gsfc.nasa.gov/FTP/caldb/data/swift/xrt/cpf/rmf"
+            urllib.urlretrieve(swiftrmfdir+"/"+Response,XspectDir+"/"+Response)
     else:
         print "{0} Does not exist; returning".format(XselectDir)
     return
@@ -353,9 +374,9 @@ def mk_spec(obsid,
 if __name__ == "__main__":
     obsid = '00031251110'
     mode = 'wt'
-    procdir = '/Users/corcoran/research/WR140/Swift/data/2016/ql'
+    procdir = '/Users/corcoran/research/WR140/Swift/data/2016'
     reduce_xrt(obsid,
                ProcDir=procdir,
-               pcmode=False)
+               pcmode=False, clobber=True)
 
 
