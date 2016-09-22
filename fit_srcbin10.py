@@ -27,7 +27,7 @@ def fit_srcbin10(obsid, WorkDir="/Users/corcoran/Dropbox/Eta_Car/swift/quicklook
 
     xspec.Fit.statMethod = "cstat"
     src = xspec.Spectrum("src.pha")
-    xspec.Plot.setRebin(minsig=3.0,  maxBins=10.0)
+    xspec.Plot.setRebin(minSig=3.0,  maxBins=10.0)
     #src=xspec.Spectrum("srcbin10.pha")
     try: 
         hdu=pyfits.open("src.arf")
