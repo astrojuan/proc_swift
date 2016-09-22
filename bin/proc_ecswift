@@ -6,8 +6,6 @@ CHANGES:
 
 """
 
-# TODO: should automatically look for pc mode or wt mode event files then process both if both found
-
 def check_response(question):
     resp = raw_input(question+" [y]/n :") or "y"
     if resp.strip().lower()[0] == "y":

@@ -23,7 +23,12 @@ def fit_srcbin10(obsid, WorkDir="/Users/corcoran/Dropbox/Eta_Car/swift/quicklook
     cwd=os.getcwd()
     print "\n"
     os.chdir(xspecdir)
-    src=xspec.Spectrum("srcbin10.pha")
+    # change to use unbinned data and cstat to avoid problems with low count rate binned data
+
+    xspec.Fit.statMethod = "cstat"
+    src = xspec.Spectrum("src.pha")
+    xspec.Plot.setRebin(minsig=3.0,  maxBins=10.0)
+    #src=xspec.Spectrum("srcbin10.pha")
     try: 
         hdu=pyfits.open("src.arf")
     except:
@@ -84,6 +89,8 @@ def fit_srcbin10(obsid, WorkDir="/Users/corcoran/Dropbox/Eta_Car/swift/quicklook
     m.show()
     xspec.Plot.xAxis = "KeV"
     xspec.Plot.device = "/xw"
+    xspec.Plot.add = True
+
     xspec.Plot("ldata")
     xspec.AllModels.calcFlux(str(emin)+" "+str(emax))
     oflux=src.flux[0]
@@ -151,7 +158,7 @@ def fit_srcbin10(obsid, WorkDir="/Users/corcoran/Dropbox/Eta_Car/swift/quicklook
     """
     Write xcm file; warn user if it exists and give option to overwrite
     """
-    filename=xspecdir+'/ec_srcbin10.xcm'
+    filename=xspecdir+'/srcbin10.xcm'
     if os.path.isfile(filename):
         print "File %s exists" % filename
         ans=raw_input('Overwrite [y]/n? ')

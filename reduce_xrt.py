@@ -1,6 +1,7 @@
 import glob
 import os
 from astropy.io import fits as pyfits
+import sys
 
 def mk_xcofiles(obsid, mode,
                 ProcDir='/Users/corcoran/research/WR140/Swift/data/2016',
@@ -31,9 +32,7 @@ def mk_xcofiles(obsid, mode,
         evtfile = glob.glob(evt)[0]
     except IndexError, errmsg:
         print errmsg
-        print "returning"
-        status = -9
-        return status
+        sys.exit('Problem locating event file; exiting')
 
     # create list of commands for time filter file
     xcofile = open('xselect{0}_timefilt.xco'.format(mode.strip()),mode='w')
@@ -80,6 +79,7 @@ def mk_xcofiles(obsid, mode,
     cmd.append("filter region src_{0}.reg".format(mode))
     cmd.append("extract spec")
     cmd.append("save spec src")
+    cmd.append("clear region src_{0}.reg".format(mode))
     cmd.append("filter region bkg_{0}.reg".format(mode))
     cmd.append("extract spec")
     cmd.append("save spec bkg")
@@ -100,7 +100,6 @@ def mk_xcofiles(obsid, mode,
 
 
 def mk_regions(obsid, mode, ProcDir = '/Users/corcoran/research/WR140/Swift/data/2016',
-               RegionDir='/Users/corcoran/research/WR140/Swift/data/2016/work/regions',
                evtfile=''):
     """
     displays the cleaned events file (of the form sw<OBSID>xpc*po_cl.evt or sw<OBSID>xwt*po_cl.evt)
@@ -124,13 +123,14 @@ def mk_regions(obsid, mode, ProcDir = '/Users/corcoran/research/WR140/Swift/data
     import os
     obsid=obsid.strip()
     mode=mode.strip().lower()
+    RegionDir = ProcDir+'/work/regions'
     if not evtfile:
         try:
             fname = "{0}/work/{1}/{2}/xsel/sw{1}x{2}*po_cl.evt".format(ProcDir,obsid,mode)
             evt = glob.glob(fname)[0]
         except:
-            print "{0} Not Found; returning".format(fname)
-            return
+            status= "{0} Not Found; returning".format(fname)
+            sys.exit(status)
     else:
         evt=evtfile.strip()
     d = ds9('Reduce_XRT')
@@ -139,7 +139,7 @@ def mk_regions(obsid, mode, ProcDir = '/Users/corcoran/research/WR140/Swift/data
     #
     d.set('file '+evt)
     d.set('smooth')
-    s = RegionDir.strip()+'/*src*'+mode+'.reg'
+    s = RegionDir+'/*src*'+mode+'.reg'
     try:
         sregion = glob.glob(s)[0]
     except Exception, errmsg:
@@ -207,10 +207,9 @@ def create_xrtpipeline_script(obsid, mode='wt',
     try:
         evtfile = glob.glob(evtname)[0]
     except Exception, errmsg:
-        print errmsg
-        print evtname
-        print "returning"
-        return
+        #print errmsg
+        warn = 'Error in locating unfiltered event file {0}; exiting'.format(evtname)
+        sys.exit(warn)
     hdu = pyfits.open(evtfile)
     ra_obj = hdu[0].header['RA_OBJ']
     dec_obj = hdu[0].header['DEC_OBJ']
@@ -248,7 +247,8 @@ def create_xrtpipeline_script(obsid, mode='wt',
 def reduce_xrt(obsid,
                ProcDir = '/Users/corcoran/research/WR140/Swift/data/2016',
                pcmode=False,
-               clobber = 'True',
+               clobber = True,
+               run_xrtpipeline = True,
                rmfdir = '/caldb/data/swift/xrt/cpf/rmf'):
     """
     For a given obsid, this routine runs 
@@ -267,8 +267,6 @@ def reduce_xrt(obsid,
       20150818 MFC added flag for analysis of pcmode data (and created associated template file)
      """
     import os
-    import pyfits
-    import urllib
 
     obs = obsid.strip()
     WorkDir = ProcDir+"/work"
@@ -279,19 +277,19 @@ def reduce_xrt(obsid,
     try:
         caldb=os.environ['CALDB']
     except:
-        print "CALDB not defined; Returning"
-        return # exits the script
+        sys.exit("CALDB not defined; Returning") # exits the script
     # print "$CALDB = %s" % caldb
     if pcmode:
         mode = 'pc'
     else:
         mode = 'wt'
     #
-    # Run XRT Pipeline
+    # Run XRT Pipeline if run_xrtpipeline = False
     #
-    XRT = create_xrtpipeline_script(obs, ProcDir=ProcDir, mode=mode, clobber = clobber)
-    os.chdir(ProcDir)
-    os.system("source "+ XRT)
+    if run_xrtpipeline:
+        XRT = create_xrtpipeline_script(obs, ProcDir=ProcDir, mode=mode, clobber = clobber)
+        os.chdir(ProcDir)
+        os.system("source "+ XRT)
     #
     # we now have the cleaned events files in the xrtfiles subdirectory
     # now do the data filtering using xselect
@@ -330,8 +328,7 @@ def mk_spec(obsid,
         os.chdir(XselectDir)
         status = mk_xcofiles(obsid, mode, ProcDir = ProcDir, clobber=clobber)
         if status <> 0:
-            print "Error in mk_xcofiles; returning"
-            return
+            sys.exit("Error in mk_xcofiles; exiting")
         cmd = "xselect @xselect{0}_timefilt.xco".format(mode.strip())
         print cmd
         os.system(cmd)
@@ -350,9 +347,6 @@ def mk_spec(obsid,
         os.system('rm srcbin10.pha')
         os.system("grppha src.pha srcbin10.pha comm = 'group min 10' temp = exit") #runs the grppha command file.
         #### Make Ancillary response Files
-
-        #marf_script = create_xrtmkarf_script(obsid, XspectDir, ProcDir=ProcDir, pcmode=pcmode)
-        #os.system("source "+ marf_script) #make Ancillary Response File.
         mk_arf(obsid,mode, ProcDir=ProcDir)
 
         #### Locate the Response file

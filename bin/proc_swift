@@ -6,8 +6,6 @@ CHANGES:
 
 """
 
-# TODO: should automatically look for pc mode or wt mode event files then process both if both found
-
 def check_response(question):
     resp = raw_input(question+" [y]/n :") or "y"
     if resp.strip().lower()[0] == "y":
@@ -21,55 +19,74 @@ if __name__ == "__main__":
     import argparse
     import shutil
     import os
-    import time
-    parser = argparse.ArgumentParser(description='Run XRT reduction for eta car swift data; the Swift data are stored in the ProcDir directory '
-                                                 'and analysis results in the ProcDir/work subdirectory')
+    import sys
+    import glob
+    parser = argparse.ArgumentParser(description='Run XRT reduction for swift data; '
+                                                 'the Swift data are stored in the ProcDir directory '
+                                                 'and analysis results in the ProcDir/work subdirectory; '
+                                                 'set --noxrtpipeline to not run the xrtpipeline '
+                                                 'and set --fitonly to only perform xspec fit on spectra previously extracted'
+                                     )
     parser.add_argument("obsid", type=str, help="Swift XRT obsid to process")
-    parser.add_argument("-ql", "--quicklook", help="Process Quicklook data instead of archived data (Default is Final Processing)", action="store_true")
     parser.add_argument("--rmfdir", help="rmf directory (default /caldb/data/swift/xrt/cpf/rmf)", type=str, default="/caldb/data/swift/xrt/cpf/rmf")
     parser.add_argument("--ProcDir", help="Directory where Processed data is located (default = /Users/corcoran/Dropbox/Eta_Car/swift/quicklook)", type=str, default="/Users/corcoran/Dropbox/Eta_Car/swift/quicklook")
-    parser.add_argument("--tardir", help="Directory where the quicklook tar file is located", type=str, default="/Users/corcoran/Downloads")
     parser.add_argument("--clobber", help="overwrite output directory", action="store_true")
-    parser.add_argument("--update", help="update existing data with new version", action="store_true")
     parser.add_argument("--pcmode", help="photon counting mode data (otherwise WT assumed)",action="store_true")
-    parser.add_argument("--noprocess", help="do not re-process data using xrtpipeline", action="store_true")
+    parser.add_argument("--fitonly", help="only re-fit spectra previously extracted", action="store_true")
+    parser.add_argument("--noxrtpipeline", help="do not run xrtpipeline", action="store_true")
     args=parser.parse_args()
     obsid=args.obsid
     clobber=args.clobber
     ProcDir=args.ProcDir
-    tardir=args.tardir
     rmfdir=args.rmfdir
     pcmode=args.pcmode
-    noprocess = args.noprocess
-    if args.quicklook:
-        if not ProcDir:
-            ProcDir = '/Users/corcoran/Dropbox/Eta_Car/swift/quicklook'
-        if args.update:
-            clobber = True
-            if os.path.isdir(ProcDir + '/' + obsid.strip()):
-                yymmdd = time.strftime("%Y%m%d")
-                question = "move %s to %s?" % (ProcDir + '/' + obsid.strip(), ProcDir + "/" + obsid + "." + yymmdd)
-                if check_response(question):
-                    os.rename(ProcDir + '/' + obsid.strip(), ProcDir + "/" + obsid + "." + yymmdd)
-        untar_ecswift(obsid, tardir=tardir, ProcDir=ProcDir)
+    fitonly = args.fitonly
+
+    if pcmode:
+        mode = 'pc'
     else:
-        if not ProcDir:
-            ProcDir = '/Users/corcoran/research/ETA_CAR/Swift/2014'
+        mode = 'wt'
+
+
+    if fitonly:
+        print "Won't process data; will attempt to fit previously extracted data\n"
+    else:
+        if args.noxrtpipeline:
+            print "Will not run xrtpipeline but will re-extract spectra in xselect\n"
+        else:
+            print "Will run xrtpipeline, then will extract spectrum and perform fit\n"
+
+    run_xrtpipeline=True
+    if args.noxrtpipeline:
+        run_xrtpipeline=False
+
     WorkDir = ProcDir+'/work'
     obsid_dir=ProcDir+'/'+obsid.strip()
-    if not noprocess:
-        if os.path.exists(obsid_dir): # check to see if directory exists
-            olddir = WorkDir + "/" + obsid.strip()
+    olddir = WorkDir + "/" + obsid.strip()
+    if not fitonly:
+        if not run_xrtpipeline:
+            # remove xselect files in the xsel directory
+            xseldir = olddir+'/'+mode+'/xsel/'
+            # get list of all files in xseldir
+            ls = glob.glob(xseldir+'/*.*')
+            # list of files to delete is all files except the evt file
+            ls = [x for x in ls if '.evt' not in x]
+            # now delete the files
+            print "Deleting previous xselect files"
+            for l in ls:
+                print "... deleting {0}".format(l)
+                os.remove(l)
+        else:
             if os.path.exists(olddir):
                 if clobber:
                     shutil.rmtree(olddir)
                 else:
-                    print "Directory %s exists but clobber = False; not overwritten" % olddir
-                    noprocess = True   # don't process since clobber set to False
-    if not noprocess:
-        reduce_xrt(obsid, ProcDir=ProcDir, pcmode=pcmode)
+                    warning = "Directory %s exists but clobber = False; not overwritten; exiting" % olddir
+                    sys.exit(warning)  # don't continue since clobber set to False
+        reduce_xrt(obsid, ProcDir=ProcDir, pcmode=pcmode, run_xrtpipeline=run_xrtpipeline)
     #
     # do a fit
+    #
     obsinfo, xcm = fit_srcbin10(obsid, WorkDir=WorkDir, emin=2.0, emax=10.0, rmfdir=rmfdir, pcmode=pcmode)
     resp = raw_input("Press <CR> to Finish :")
 
