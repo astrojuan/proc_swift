@@ -2,6 +2,7 @@
 
 import os
 import xspec
+import sys
 
 def fit_srcbin10(obsid, WorkDir="/Users/corcoran/Dropbox/Eta_Car/swift/quicklook/work",
                    emin=2.0, emax=10.0, rmfdir='/caldb/data/swift/xrt/cpf/rmf', chatter=0, pcmode = False):
@@ -84,13 +85,16 @@ def fit_srcbin10(obsid, WorkDir="/Users/corcoran/Dropbox/Eta_Car/swift/quicklook
     m.gaussian.norm=[1e-4,1e-5,0,0,0.1,0.1]
     m.show()
 
-
-    xspec.Fit.perform()
+    try:
+        xspec.Fit.perform()
+    except Exception, errmsg:
+        sys.exit("{0}; Can't proceed; exiting".format(errmsg.value))
     m.show()
     xspec.Plot.xAxis = "KeV"
     xspec.Plot.device = "/xw"
     xspec.Plot.add = True
 
+    xspec.Plot.addCommand("re y 1e-5 20")
     xspec.Plot("ldata")
     xspec.AllModels.calcFlux(str(emin)+" "+str(emax))
     oflux=src.flux[0]
@@ -140,19 +144,26 @@ def fit_srcbin10(obsid, WorkDir="/Users/corcoran/Dropbox/Eta_Car/swift/quicklook
     m2.gaussian.norm=[gnorm,-0.0001]
     m2.cflux.Emin=emin
     m2.cflux.Emax=emax
-    xspec.Fit.perform()
-    m2.show()
-    cf=m2.cflux.lg10Flux.values[0]
-    print "%5.1f - %5.1f keV flux from cflux = %10.4e" % (emin, emax, 10**cf)
-    xspec.Fit.error("2.706 8") # param 8 is cflux
-    p8=xspec.AllModels(1)(8)
-    cfmin=p8.error[0]
-    cfmax=p8.error[1]
+    try:
+        xspec.Fit.perform()
+        m2.show()
+        cf = m2.cflux.lg10Flux.values[0]
+        print "%5.1f - %5.1f keV flux from cflux = %10.4e" % (emin, emax, 10 ** cf)
+        xspec.Fit.error("2.706 8")  # param 8 is cflux
+        p8 = xspec.AllModels(1)(8)
+        cfmin = p8.error[0]
+        cfmax = p8.error[1]
+        fluxplus = 10 ** cfmax - 10 ** cf
+        fluxmin = 10 ** cf - 10 ** cfmin
+    except Exception, errmsg:
+        print str(errmsg)
+        fluxplus = 0.0
+        fluxmin = 0.0
     duration=te.jd-t.jd
     nhpluserr = nhmax-nh3
     nhminerr  = nh3-nhmin
     output={'obsid':obsid, 't_start':t.jd, 't_end':te.jd, 't_mid':tmid, 'duration':duration,
-            'exposure':src.exposure, 'flux':oflux, 'fluxplus':10**cfmax-10**cf, 'fluxmin':10**cf-10**cfmin,
+            'exposure':src.exposure, 'flux':oflux, 'fluxplus':fluxplus, 'fluxmin':fluxmin,
             'dateobs':dateobs, 'nh':nh3, 'nhplus':nhpluserr, 'nhmin':nhminerr, 'emin':emin, 'emax':emax}
 
     """
@@ -264,21 +275,25 @@ def check_response(question):
 
 if __name__ == "__main__":
     #from proc_swift import fit_srcbin10, print_obsinfo
-    import argparse
-    parser = argparse.ArgumentParser(description='Fit XRT spectrum for swift data;  '
-                                                 'the analysis results are in the ProcDir/work/OBSID/xspec subdirectory')
-    parser.add_argument("obsid", type=str, help="Swift XRT obsid to process")
-    parser.add_argument("--rmfdir", help="rmf directory (default /caldb/data/swift/xrt/cpf/rmf)", type=str, default="/caldb/data/swift/xrt/cpf/rmf")
-    parser.add_argument("--ProcDir", help="Directory where Processed data is located (default = /Users/corcoran/Dropbox/Eta_Car/swift/quicklook)", type=str, default="/Users/corcoran/Dropbox/Eta_Car/swift/quicklook")
-    args=parser.parse_args()
-    obsid=args.obsid
-    ProcDir=args.ProcDir
-    rmfdir=args.rmfdir
-    WorkDir = ProcDir+'/work'
-    #fit spectrum
-    obsinfo, xcm = fit_srcbin10(obsid, WorkDir=WorkDir, emin=2.0, emax=10.0, rmfdir=rmfdir)
-    # record info
-    obsinfo_log=WorkDir+"/"+obsid.strip()+"/xspec/obsinfo.log"
-    print_obsinfo(obsinfo, outfile=obsinfo_log)
-    resp = raw_input("Press <CR> to Finish :")
-
+    # import argparse
+    # parser = argparse.ArgumentParser(description='Fit XRT spectrum for swift data;  '
+    #                                              'the analysis results are in the ProcDir/work/OBSID/xspec subdirectory')
+    # parser.add_argument("obsid", type=str, help="Swift XRT obsid to process")
+    # parser.add_argument("--rmfdir", help="rmf directory (default /caldb/data/swift/xrt/cpf/rmf)", type=str, default="/caldb/data/swift/xrt/cpf/rmf")
+    # parser.add_argument("--ProcDir", help="Directory where Processed data is located (default = /Users/corcoran/Dropbox/Eta_Car/swift/quicklook)", type=str, default="/Users/corcoran/Dropbox/Eta_Car/swift/quicklook")
+    # args=parser.parse_args()
+    # obsid=args.obsid
+    # ProcDir=args.ProcDir
+    # rmfdir=args.rmfdir
+    # WorkDir = ProcDir+'/work'
+    # #fit spectrum
+    # obsinfo, xcm = fit_srcbin10(obsid, WorkDir=WorkDir, emin=2.0, emax=10.0, rmfdir=rmfdir)
+    # # record info
+    # obsinfo_log=WorkDir+"/"+obsid.strip()+"/xspec/obsinfo.log"
+    # print_obsinfo(obsinfo, outfile=obsinfo_log)
+    # resp = raw_input("Press <CR> to Finish :")
+    obsid = '00031251003'
+    WorkDir = '/Users/corcoran/research/WR140/Swift/2009/work'
+    fit_srcbin10(obsid, WorkDir=WorkDir,
+                 emin=2.0, emax=10.0, rmfdir='/caldb/data/swift/xrt/cpf/rmf', chatter=0, pcmode=True)
+    print "starting fit_srcbin10"
